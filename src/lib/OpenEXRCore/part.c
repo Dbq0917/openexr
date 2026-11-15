@@ -470,40 +470,6 @@ exr_get_chunk_table (exr_const_context_t ctxt, int part_index, uint64_t **table,
 /**************************************/
 
 exr_result_t
-exr_validate_chunk_table (exr_context_t ctxt, int part_index)
-{
-    exr_result_t rv;
-    uint64_t     chunkmin, maxoff = ((uint64_t) -1);
-    uint64_t*    ctable;
-    int          complete;
-    EXR_LOCK_WRITE_AND_DEFINE_PART (part_index);
-
-    /* need to read from the file to get the packed chunk size */
-    rv = extract_chunk_table (ctxt, part, &ctable, &chunkmin);
-
-    if (rv != EXR_ERR_SUCCESS) return rv;
-
-    if (ctxt->file_size > 0) maxoff = (uint64_t) ctxt->file_size;
-    complete = 1;
-
-    for (int ci = 0; ci < part->chunk_count; ++ci)
-    {
-        uint64_t cchunk = ctable[ci];
-        if (cchunk < chunkmin || cchunk >= maxoff)
-        {
-            complete = 0;
-            break;
-        }
-    }
-
-    if (!complete) return EXR_ERR_INCOMPLETE_CHUNK_TABLE;
-
-    return EXR_ERR_SUCCESS;
-}
-
-/**************************************/
-
-exr_result_t
 exr_get_scanlines_per_chunk (
     exr_const_context_t ctxt, int part_index, int32_t* out)
 {

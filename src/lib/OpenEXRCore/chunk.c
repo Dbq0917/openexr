@@ -636,6 +636,51 @@ extract_chunk_table (
 
 /**************************************/
 
+exr_result_t
+exr_validate_chunk_table (exr_context_t ctxt, int part_index)
+{
+    exr_result_t rv;
+    uint64_t     chunkmin, maxoff = ((uint64_t) -1);
+    uint64_t*    ctable;
+    EXR_LOCK_WRITE_AND_DEFINE_PART (part_index);
+
+    rv = extract_chunk_table (ctxt, part, &ctable, &chunkmin);
+    if (rv != EXR_ERR_SUCCESS) return EXR_UNLOCK_WRITE_AND_RETURN (rv);
+
+    if (ctxt->file_size > 0) maxoff = (uint64_t) ctxt->file_size;
+
+    for (int ci = 0; ci < part->chunk_count; ++ci)
+    {
+        uint64_t cchunk = ctable[ci];
+        uint64_t endoff;
+        int      found_ci = ci;
+
+        if (cchunk < chunkmin || cchunk >= maxoff)
+            return EXR_UNLOCK_WRITE_AND_RETURN (
+                EXR_ERR_INCOMPLETE_CHUNK_TABLE);
+
+        /*
+         * Validating the chunk leader also validates the payload extent
+         * recorded there.  This is what distinguishes a complete offset
+         * table from a file where an interrupted write left a chunk
+         * truncated.
+         */
+        rv = read_and_validate_chunk_leader (
+            ctxt, part, part_index, cchunk, &found_ci, &endoff);
+        if (rv != EXR_ERR_SUCCESS || found_ci != ci)
+            return EXR_UNLOCK_WRITE_AND_RETURN (
+                EXR_ERR_INCOMPLETE_CHUNK_TABLE);
+
+        if (endoff > maxoff)
+            return EXR_UNLOCK_WRITE_AND_RETURN (
+                EXR_ERR_INCOMPLETE_CHUNK_TABLE);
+    }
+
+    return EXR_UNLOCK_WRITE_AND_RETURN (EXR_ERR_SUCCESS);
+}
+
+/**************************************/
+
 static exr_result_t
 alloc_chunk_table (
     exr_const_context_t ctxt, exr_const_priv_part_t part, uint64_t** chunktable)

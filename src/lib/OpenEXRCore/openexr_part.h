@@ -160,9 +160,12 @@ exr_get_chunk_count (exr_const_context_t ctxt, int part_index, int32_t* out);
 EXR_EXPORT exr_result_t
 exr_get_chunk_table (exr_const_context_t ctxt, int part_index, uint64_t **table, int32_t* count);
 
-/** Return whether the chunk table for this part is completely written.
+/** Return whether the chunk table and chunk data for this part are complete.
  *
- * This only validates that all the offsets are valid.
+ * This validates that all the offsets are valid, that each referenced
+ * chunk leader is readable and consistent with its table entry, and that
+ * the payload recorded in each chunk leader does not extend past the end
+ * of the file.
  *
  * return EXR_ERR_INCOMPLETE_CHUNK_TABLE when incomplete, EXR_ERR_SUCCESS
  * if it appears ok, or another error if otherwise problematic
